@@ -13,4 +13,6 @@ message GenesisState {
 
   // params defines all the paramaters of the module.
   Params params = 2 [(gogoproto.nullable) = false];
+
+  Pool pool = 3 [(gogoproto.nullable) = false];
 }

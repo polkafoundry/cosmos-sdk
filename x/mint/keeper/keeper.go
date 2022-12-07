@@ -71,7 +71,7 @@ func (k Keeper) SetMinter(ctx sdk.Context, minter types.Minter) {
 
 // GetParams returns the total set of minting parameters.
 func (k Keeper) GetParams(ctx sdk.Context) (params types.Params) {
-	k.paramSpace.GetParamSet(ctx, &params)
+	k.paramSpace.GetParamSetIfExists(ctx, &params)
 	return params
 }
 
@@ -107,4 +107,29 @@ func (k Keeper) MintCoins(ctx sdk.Context, newCoins sdk.Coins) error {
 // AddCollectedFees to be used in BeginBlocker.
 func (k Keeper) AddCollectedFees(ctx sdk.Context, fees sdk.Coins) error {
 	return k.bankKeeper.SendCoinsFromModuleToModule(ctx, types.ModuleName, k.feeCollectorName, fees)
+}
+
+func (k Keeper) GetPool(ctx sdk.Context) (pool types.Pool) {
+	store := ctx.KVStore(k.storeKey)
+	b := store.Get(types.PoolKey)
+	if b == nil {
+		panic("stored pool should not have been nil")
+	}
+
+	k.cdc.MustUnmarshal(b, &pool)
+	return
+}
+
+func (k Keeper) SetPool(ctx sdk.Context, pool types.Pool) {
+	store := ctx.KVStore(k.storeKey)
+	b := k.cdc.MustMarshal(&pool)
+	store.Set(types.PoolKey, b)
+}
+
+func (k Keeper) GetBalance(ctx sdk.Context, addr sdk.AccAddress, denom string) sdk.Coin {
+	return k.bankKeeper.GetBalance(ctx, addr, denom)
+}
+
+func (k Keeper) AddCollectedFeesFromAccount(ctx sdk.Context, fees sdk.Coins, from sdk.AccAddress) error {
+	return k.bankKeeper.SendCoinsFromAccountToModule(ctx, from, k.feeCollectorName, fees)
 }

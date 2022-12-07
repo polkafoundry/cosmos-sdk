@@ -395,6 +395,7 @@
 - [cosmos/mint/v1beta1/mint.proto](#cosmos/mint/v1beta1/mint.proto)
     - [Minter](#cosmos.mint.v1beta1.Minter)
     - [Params](#cosmos.mint.v1beta1.Params)
+    - [Pool](#cosmos.mint.v1beta1.Pool)
   
 - [cosmos/mint/v1beta1/genesis.proto](#cosmos/mint/v1beta1/genesis.proto)
     - [GenesisState](#cosmos.mint.v1beta1.GenesisState)
@@ -5768,6 +5769,26 @@ Params holds parameters for the mint module.
 | `inflation_min` | [string](#string) |  | minimum inflation rate |
 | `goal_bonded` | [string](#string) |  | goal of percent bonded atoms |
 | `blocks_per_year` | [uint64](#uint64) |  | expected blocks per year |
+| `using_fund` | [bool](#bool) |  |  |
+| `validator_reward_fund` | [string](#string) |  |  |
+| `fund_duration` | [uint64](#uint64) |  |  |
+| `fund_address` | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="cosmos.mint.v1beta1.Pool"></a>
+
+### Pool
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `used` | [string](#string) |  | the amount of used reward, including the unpaid amount |
+| `debt` | [string](#string) |  |  |
 
 
 
@@ -5800,6 +5821,7 @@ GenesisState defines the mint module's genesis state.
 | ----- | ---- | ----- | ----------- |
 | `minter` | [Minter](#cosmos.mint.v1beta1.Minter) |  | minter is a space for holding current inflation information. |
 | `params` | [Params](#cosmos.mint.v1beta1.Params) |  | params defines all the paramaters of the module. |
+| `pool` | [Pool](#cosmos.mint.v1beta1.Pool) |  |  |
 
 
 

@@ -10,6 +10,7 @@ import (
 func InitGenesis(ctx sdk.Context, keeper keeper.Keeper, ak types.AccountKeeper, data *types.GenesisState) {
 	keeper.SetMinter(ctx, data.Minter)
 	keeper.SetParams(ctx, data.Params)
+	keeper.SetPool(ctx, data.Pool)
 	ak.GetModuleAccount(ctx, types.ModuleName)
 }
 
@@ -17,5 +18,6 @@ func InitGenesis(ctx sdk.Context, keeper keeper.Keeper, ak types.AccountKeeper, 
 func ExportGenesis(ctx sdk.Context, keeper keeper.Keeper) *types.GenesisState {
 	minter := keeper.GetMinter(ctx)
 	params := keeper.GetParams(ctx)
-	return types.NewGenesisState(minter, params)
+	pool := keeper.GetPool(ctx)
+	return types.NewGenesisState(minter, params, pool)
 }

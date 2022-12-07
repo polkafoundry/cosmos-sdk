@@ -19,6 +19,10 @@ var (
 	KeyInflationMin        = []byte("InflationMin")
 	KeyGoalBonded          = []byte("GoalBonded")
 	KeyBlocksPerYear       = []byte("BlocksPerYear")
+	KeyUsingFund           = []byte("UsingFund")
+	KeyValidatorRewardFund = []byte("ValidatorRewardFund")
+	KeyFundDuration        = []byte("FundDuration")
+	KeyFundAddress         = []byte("FundAddress")
 )
 
 // ParamTable for minting module.
@@ -28,6 +32,7 @@ func ParamKeyTable() paramtypes.KeyTable {
 
 func NewParams(
 	mintDenom string, inflationRateChange, inflationMax, inflationMin, goalBonded sdk.Dec, blocksPerYear uint64,
+	usingFund bool, validatorRewardFund sdk.Dec, fundDuration uint64, fundAddress string,
 ) Params {
 	return Params{
 		MintDenom:           mintDenom,
@@ -36,11 +41,16 @@ func NewParams(
 		InflationMin:        inflationMin,
 		GoalBonded:          goalBonded,
 		BlocksPerYear:       blocksPerYear,
+		UsingFund:           usingFund,
+		ValidatorRewardFund: validatorRewardFund,
+		FundDuration:        fundDuration,
+		FundAddress:         fundAddress,
 	}
 }
 
 // default minting module parameters
 func DefaultParams() Params {
+	addr, _ := sdk.AccAddressFromHex("0000000000000000000000000000000000000000")
 	return Params{
 		MintDenom:           sdk.DefaultBondDenom,
 		InflationRateChange: sdk.NewDecWithPrec(13, 2),
@@ -48,6 +58,17 @@ func DefaultParams() Params {
 		InflationMin:        sdk.NewDecWithPrec(7, 2),
 		GoalBonded:          sdk.NewDecWithPrec(67, 2),
 		BlocksPerYear:       uint64(60 * 60 * 8766 / 5), // assuming 5 second block times
+		UsingFund:           false,
+		ValidatorRewardFund: sdk.NewDecWithPrec(0, 2),
+		FundDuration:        1,
+		FundAddress:         addr.String(),
+	}
+}
+
+func DefaultInitialPool() Pool {
+	return Pool{
+		Used: sdk.ZeroInt(),
+		Debt: sdk.ZeroInt(),
 	}
 }
 
@@ -69,6 +90,18 @@ func (p Params) Validate() error {
 		return err
 	}
 	if err := validateBlocksPerYear(p.BlocksPerYear); err != nil {
+		return err
+	}
+	if err := validateUsingFund(p.UsingFund); err != nil {
+		return err
+	}
+	if err := validateValidatorRewardFund(p.ValidatorRewardFund); err != nil {
+		return err
+	}
+	if err := validateFundDuration(p.FundDuration); err != nil {
+		return err
+	}
+	if err := validateFundAddress(p.FundAddress); err != nil {
 		return err
 	}
 	if p.InflationMax.LT(p.InflationMin) {
@@ -96,6 +129,10 @@ func (p *Params) ParamSetPairs() paramtypes.ParamSetPairs {
 		paramtypes.NewParamSetPair(KeyInflationMin, &p.InflationMin, validateInflationMin),
 		paramtypes.NewParamSetPair(KeyGoalBonded, &p.GoalBonded, validateGoalBonded),
 		paramtypes.NewParamSetPair(KeyBlocksPerYear, &p.BlocksPerYear, validateBlocksPerYear),
+		paramtypes.NewParamSetPair(KeyUsingFund, &p.UsingFund, validateUsingFund),
+		paramtypes.NewParamSetPair(KeyValidatorRewardFund, &p.ValidatorRewardFund, validateValidatorRewardFund),
+		paramtypes.NewParamSetPair(KeyFundDuration, &p.FundDuration, validateFundDuration),
+		paramtypes.NewParamSetPair(KeyFundAddress, &p.FundAddress, validateFundAddress),
 	}
 }
 
@@ -187,6 +224,58 @@ func validateBlocksPerYear(i interface{}) error {
 
 	if v == 0 {
 		return fmt.Errorf("blocks per year must be positive: %d", v)
+	}
+
+	return nil
+}
+
+func validateUsingFund(i interface{}) error {
+	_, ok := i.(bool)
+	if !ok {
+		return fmt.Errorf("invalid parameter type: %T", i)
+	}
+	return nil
+}
+
+func validateValidatorRewardFund(i interface{}) error {
+	v, ok := i.(sdk.Dec)
+	if !ok {
+		return fmt.Errorf("invalid parameter type: %T", i)
+	}
+
+	if v.IsNegative() {
+		return fmt.Errorf("validator reward fund must not be negative: %s", v)
+	}
+
+	return nil
+}
+
+func validateFundDuration(i interface{}) error {
+	v, ok := i.(uint64)
+	if !ok {
+		return fmt.Errorf("invalid parameter type: %T", i)
+	}
+
+	if v == 0 {
+		return fmt.Errorf("fund duration must be positive: %d", v)
+	}
+
+	return nil
+}
+
+func validateFundAddress(i interface{}) error {
+	v, ok := i.(string)
+	if !ok {
+		return fmt.Errorf("invalid parameter type: %T", i)
+	}
+
+	if v == "" {
+		return nil
+	}
+
+	_, err := sdk.AccAddressFromBech32(v)
+	if err != nil {
+		return fmt.Errorf("invalid fund address: %s", v)
 	}
 
 	return nil

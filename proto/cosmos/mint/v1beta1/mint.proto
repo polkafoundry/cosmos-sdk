@@ -50,4 +50,27 @@ message Params {
   ];
   // expected blocks per year
   uint64 blocks_per_year = 6 [(gogoproto.moretags) = "yaml:\"blocks_per_year\""];
+
+  bool using_fund = 7 [(gogoproto.moretags) = "yaml:\"using_fund\""];
+  string validator_reward_fund = 8 [
+    (gogoproto.moretags)   = "yaml:\"validator_reward_fund\"",
+    (gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Dec",
+    (gogoproto.nullable)   = false
+  ];
+  uint64 fund_duration = 9 [(gogoproto.moretags) = "yaml:\"fund_duration\""];
+  string fund_address = 10 [(gogoproto.moretags) = "yaml:\"fund_address\""];
+}
+
+message Pool {
+  // the amount of used reward, including the unpaid amount
+  string used = 1 [
+    (gogoproto.moretags)   = "yaml:\"used\"",
+    (gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Int",
+    (gogoproto.nullable)   = false
+  ];
+  string debt = 2 [
+    (gogoproto.moretags)   = "yaml:\"debt\"",
+    (gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Int",
+    (gogoproto.nullable)   = false
+  ];
 }

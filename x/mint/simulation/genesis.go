@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"strconv"
 
+	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/mint/types"
@@ -19,6 +21,8 @@ const (
 	InflationMax        = "inflation_max"
 	InflationMin        = "inflation_min"
 	GoalBonded          = "goal_bonded"
+	ValidatorRewardFund = "validator_reward_fund"
+	FundAddress         = "fund_address"
 )
 
 // GenInflation randomized Inflation
@@ -44,6 +48,16 @@ func GenInflationMin(r *rand.Rand) sdk.Dec {
 // GenGoalBonded randomized GoalBonded
 func GenGoalBonded(r *rand.Rand) sdk.Dec {
 	return sdk.NewDecWithPrec(67, 2)
+}
+
+func GenValidatorRewardFund(r *rand.Rand) sdk.Dec {
+	return sdk.NewDecWithPrec(int64(r.Uint64()), 2)
+}
+
+func GenFundAddress(r *rand.Rand) string {
+	seed := []byte(strconv.Itoa(r.Int()))
+	pubKey := ed25519.GenPrivKeyFromSecret(seed).PubKey()
+	return sdk.AccAddress(pubKey.Address()).String()
 }
 
 // RandomizedGenState generates a random GenesisState for mint
@@ -82,9 +96,26 @@ func RandomizedGenState(simState *module.SimulationState) {
 
 	mintDenom := sdk.DefaultBondDenom
 	blocksPerYear := uint64(60 * 60 * 8766 / 5)
-	params := types.NewParams(mintDenom, inflationRateChange, inflationMax, inflationMin, goalBonded, blocksPerYear)
 
-	mintGenesis := types.NewGenesisState(types.InitialMinter(inflation), params)
+	var validatorRewardFund sdk.Dec
+	simState.AppParams.GetOrGenerate(
+		simState.Cdc, ValidatorRewardFund, &validatorRewardFund, simState.Rand,
+		func(r *rand.Rand) { validatorRewardFund = GenValidatorRewardFund(r) },
+	)
+
+	fundDuration := 5 * blocksPerYear
+
+	var fundAddress string
+	simState.AppParams.GetOrGenerate(
+		simState.Cdc, FundAddress, &fundAddress, simState.Rand,
+		func(r *rand.Rand) { fundAddress = GenFundAddress(r) },
+	)
+
+	params := types.NewParams(mintDenom, inflationRateChange, inflationMax, inflationMin, goalBonded, blocksPerYear,
+		false, validatorRewardFund, fundDuration, fundAddress,
+	)
+
+	mintGenesis := types.NewGenesisState(types.InitialMinter(inflation), params, types.DefaultInitialPool())
 
 	bz, err := json.MarshalIndent(&mintGenesis, "", " ")
 	if err != nil {

@@ -26,6 +26,11 @@ func registerQueryRoutes(clientCtx client.Context, r *mux.Router) {
 		"/minting/annual-provisions",
 		queryAnnualProvisionsHandlerFn(clientCtx),
 	).Methods("GET")
+
+	r.HandleFunc(
+		"/minting/pool",
+		queryPoolHandlerFn(clientCtx),
+	).Methods("GET")
 }
 
 func queryParamsHandlerFn(clientCtx client.Context) http.HandlerFunc {
@@ -69,6 +74,25 @@ func queryInflationHandlerFn(clientCtx client.Context) http.HandlerFunc {
 func queryAnnualProvisionsHandlerFn(clientCtx client.Context) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryAnnualProvisions)
+
+		clientCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, clientCtx, r)
+		if !ok {
+			return
+		}
+
+		res, height, err := clientCtx.QueryWithData(route, nil)
+		if rest.CheckInternalServerError(w, err) {
+			return
+		}
+
+		clientCtx = clientCtx.WithHeight(height)
+		rest.PostProcessResponse(w, clientCtx, res)
+	}
+}
+
+func queryPoolHandlerFn(clientCtx client.Context) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		route := fmt.Sprintf("custom/%s/%s", types.QuerierRoute, types.QueryPool)
 
 		clientCtx, ok := rest.ParseQueryHeightOrReturnBadRequest(w, clientCtx, r)
 		if !ok {

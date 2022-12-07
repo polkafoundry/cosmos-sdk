@@ -32,3 +32,10 @@ func (k Keeper) AnnualProvisions(c context.Context, _ *types.QueryAnnualProvisio
 
 	return &types.QueryAnnualProvisionsResponse{AnnualProvisions: minter.AnnualProvisions}, nil
 }
+
+func (k Keeper) Pool(c context.Context, _ *types.QueryPoolRequest) (*types.QueryPoolResponse, error) {
+	ctx := sdk.UnwrapSDKContext(c)
+	pool := k.GetPool(ctx)
+
+	return &types.QueryPoolResponse{Pool: pool}, nil
+}

@@ -24,6 +24,7 @@ func GetQueryCmd() *cobra.Command {
 		GetCmdQueryParams(),
 		GetCmdQueryInflation(),
 		GetCmdQueryAnnualProvisions(),
+		GetCmdQueryPool(),
 	)
 
 	return mintingQueryCmd
@@ -108,6 +109,33 @@ func GetCmdQueryAnnualProvisions() *cobra.Command {
 			}
 
 			return clientCtx.PrintString(fmt.Sprintf("%s\n", res.AnnualProvisions))
+		},
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+
+	return cmd
+}
+
+func GetCmdQueryPool() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "pool",
+		Short: "Query the current pool value",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			queryClient := types.NewQueryClient(clientCtx)
+
+			params := &types.QueryPoolRequest{}
+			res, err := queryClient.Pool(cmd.Context(), params)
+			if err != nil {
+				return err
+			}
+
+			return clientCtx.PrintProto(&res.Pool)
 		},
 	}
 

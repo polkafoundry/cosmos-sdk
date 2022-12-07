@@ -407,6 +407,8 @@
     - [QueryInflationResponse](#cosmos.mint.v1beta1.QueryInflationResponse)
     - [QueryParamsRequest](#cosmos.mint.v1beta1.QueryParamsRequest)
     - [QueryParamsResponse](#cosmos.mint.v1beta1.QueryParamsResponse)
+    - [QueryPoolRequest](#cosmos.mint.v1beta1.QueryPoolRequest)
+    - [QueryPoolResponse](#cosmos.mint.v1beta1.QueryPoolResponse)
   
     - [Query](#cosmos.mint.v1beta1.Query)
   
@@ -5921,6 +5923,31 @@ QueryParamsResponse is the response type for the Query/Params RPC method.
 
 
 
+
+<a name="cosmos.mint.v1beta1.QueryPoolRequest"></a>
+
+### QueryPoolRequest
+
+
+
+
+
+
+
+<a name="cosmos.mint.v1beta1.QueryPoolResponse"></a>
+
+### QueryPoolResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| `pool` | [Pool](#cosmos.mint.v1beta1.Pool) |  |  |
+
+
+
+
+
  <!-- end messages -->
 
  <!-- end enums -->
@@ -5938,6 +5965,7 @@ Query provides defines the gRPC querier service.
 | `Params` | [QueryParamsRequest](#cosmos.mint.v1beta1.QueryParamsRequest) | [QueryParamsResponse](#cosmos.mint.v1beta1.QueryParamsResponse) | Params returns the total set of minting parameters. | GET|/cosmos/mint/v1beta1/params|
 | `Inflation` | [QueryInflationRequest](#cosmos.mint.v1beta1.QueryInflationRequest) | [QueryInflationResponse](#cosmos.mint.v1beta1.QueryInflationResponse) | Inflation returns the current minting inflation value. | GET|/cosmos/mint/v1beta1/inflation|
 | `AnnualProvisions` | [QueryAnnualProvisionsRequest](#cosmos.mint.v1beta1.QueryAnnualProvisionsRequest) | [QueryAnnualProvisionsResponse](#cosmos.mint.v1beta1.QueryAnnualProvisionsResponse) | AnnualProvisions current minting annual provisions value. | GET|/cosmos/mint/v1beta1/annual_provisions|
+| `Pool` | [QueryPoolRequest](#cosmos.mint.v1beta1.QueryPoolRequest) | [QueryPoolResponse](#cosmos.mint.v1beta1.QueryPoolResponse) |  | GET|/cosmos/mint/v1beta1/pool|
 
  <!-- end services -->
 

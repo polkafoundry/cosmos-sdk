@@ -178,3 +178,20 @@ func normalizeBroadcastMode(mode tx.BroadcastMode) string {
 		return "unspecified"
 	}
 }
+
+// BroadcastOpSync broadcasts user operation bytes to a Tendermint node
+// synchronously (i.e. returns after CheckTx execution).
+// FIXME: correcting response
+func (ctx Context) BroadcastOpSync(opBytes []byte) (*sdk.TxResponse, error) {
+	node, err := ctx.GetExtendedNode()
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := node.BroadcastOpSync(context.Background(), opBytes)
+	if errRes := CheckTendermintError(err, opBytes); errRes != nil {
+		return errRes, nil
+	}
+
+	return &sdk.TxResponse{TxHash: res.Hash.String()}, nil
+}

@@ -1,0 +1,42 @@
+syntax = "proto3";
+package cosmos.op.v1beta1;
+
+import "gogoproto/gogo.proto";
+import "google/protobuf/any.proto";
+
+option go_package = "github.com/cosmos/cosmos-sdk/types/op";
+
+// Op is the standard type used for broadcasting transactions.
+message Op {
+  // body is the processable content of the operation
+  OpBody body = 1;
+}
+
+message OpRaw {
+  bytes body_bytes = 1;
+}
+
+// OpBody is the body of a transaction that all signers sign over.
+message OpBody {
+  // messages is a list of messages to be executed.
+  repeated google.protobuf.Any messages = 1;
+
+  // memo is any arbitrary note/comment to be added to the operation.
+  // WARNING: in clients, any publicly exposed text should not be called memo,
+  // but should be called `note` instead (see https://github.com/cosmos/cosmos-sdk/issues/9122).
+  string memo = 2;
+
+  // timeout is the block height after which this transaction will not
+  // be processed by the chain
+  uint64 timeout_height = 3;
+
+  // extension_options are arbitrary options that can be added by chains
+  // when the default options are not sufficient. If any of these are present
+  // and can't be handled, the transaction will be rejected
+  repeated google.protobuf.Any extension_options = 1023;
+
+  // extension_options are arbitrary options that can be added by chains
+  // when the default options are not sufficient. If any of these are present
+  // and can't be handled, they will be ignored
+  repeated google.protobuf.Any non_critical_extension_options = 2047;
+}

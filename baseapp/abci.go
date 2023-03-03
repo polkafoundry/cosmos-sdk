@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	errorsmod "cosmossdk.io/errors"
 	"github.com/gogo/protobuf/proto"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
@@ -859,4 +860,34 @@ func SplitABCIQueryPath(requestPath string) (path []string) {
 	}
 
 	return path
+}
+
+func (app *BaseApp) CheckOp(req abci.RequestCheckOp) abci.ResponseCheckOp {
+	var mode runOpMode
+
+	switch {
+	case req.Type == abci.CheckOpType_New:
+		mode = runOpModeCheck
+
+	case req.Type == abci.CheckOpType_Recheck:
+		mode = runOpModeReCheck
+
+	default:
+		panic(fmt.Sprintf("unknown RequestCheckOp type: %s", req.Type))
+	}
+
+	result, err := app.runOp(mode, req.Op)
+	if err != nil {
+		space, code, log := errorsmod.ABCIInfo(err, app.trace)
+		return abci.ResponseCheckOp{
+			Code:      code,
+			Codespace: space,
+			Log:       log,
+		}
+	}
+
+	return abci.ResponseCheckOp{
+		Log:  result.Log,
+		Data: result.Data,
+	}
 }

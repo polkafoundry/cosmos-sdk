@@ -26,6 +26,8 @@ const (
 	runTxModeReCheck                   // Recheck a (pending) transaction after a commit
 	runTxModeSimulate                  // Simulate a transaction
 	runTxModeDeliver                   // Deliver a transaction
+	runOpModeCheck    runOpMode = iota
+	runOpModeReCheck
 )
 
 var _ abci.Application = (*BaseApp)(nil)
@@ -33,6 +35,9 @@ var _ abci.Application = (*BaseApp)(nil)
 type (
 	// Enum mode for app.runTx
 	runTxMode uint8
+
+	// Enum mode for app.runOp
+	runOpMode uint8
 
 	// StoreLoader defines a customizable function to control how we load the CommitMultiStore
 	// from disk. This is useful for state migration, when loading a datastore written with
@@ -48,6 +53,7 @@ type BaseApp struct { // nolint: maligned
 	name              string // application name from abci.Info
 	interfaceRegistry codectypes.InterfaceRegistry
 	txDecoder         sdk.TxDecoder // unmarshal []byte into sdk.Tx
+	opDecoder         sdk.OpDecoder // unmarshal []byte into sdk.Op
 
 	anteHandler sdk.AnteHandler // ante handler for fee and auth
 	postHandler sdk.AnteHandler // post handler, optional, e.g. for tips
@@ -130,6 +136,7 @@ type moduleRouter struct {
 	queryRouter      sdk.QueryRouter   // router for redirecting query calls
 	grpcQueryRouter  *GRPCQueryRouter  // router for redirecting gRPC query calls
 	msgServiceRouter *MsgServiceRouter // router for redirecting Msg service messages
+	opServiceRouter  *OpServiceRouter
 }
 
 type abciData struct {
@@ -179,6 +186,7 @@ func NewBaseApp(
 			queryRouter:      NewQueryRouter(),
 			grpcQueryRouter:  NewGRPCQueryRouter(),
 			msgServiceRouter: NewMsgServiceRouter(),
+			opServiceRouter:  NewOpServiceRouter(),
 		},
 		txDecoder: txDecoder,
 	}
@@ -227,6 +235,13 @@ func (app *BaseApp) MsgServiceRouter() *MsgServiceRouter { return app.msgService
 // SetMsgServiceRouter sets the MsgServiceRouter of a BaseApp.
 func (app *BaseApp) SetMsgServiceRouter(msgServiceRouter *MsgServiceRouter) {
 	app.msgServiceRouter = msgServiceRouter
+}
+
+func (app *BaseApp) OpServiceRouter() *OpServiceRouter { return app.opServiceRouter }
+
+// SetOpServiceRouter sets the OpServiceRouter of a BaseApp.
+func (app *BaseApp) SetOpServiceRouter(opServiceRouter *OpServiceRouter) {
+	app.opServiceRouter = opServiceRouter
 }
 
 // MountStores mounts all IAVL or DB stores to the provided keys in the BaseApp
@@ -558,6 +573,22 @@ func validateBasicTxMsgs(msgs []sdk.Msg) error {
 	return nil
 }
 
+// validateBasicOpMsgs executes basic validator calls for messages.
+func validateBasicOpMsgs(msgs []sdk.OpMsg) error {
+	if len(msgs) == 0 {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "must contain at least one message")
+	}
+
+	for _, msg := range msgs {
+		err := msg.ValidateBasic()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // Returns the applications's deliverState if app is in runTxModeDeliver,
 // otherwise it returns the application's checkstate.
 func (app *BaseApp) getState(mode runTxMode) *state {
@@ -843,4 +874,52 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 // makeABCIData generates the Data field to be sent to ABCI Check/DeliverTx.
 func makeABCIData(msgResponses []*codectypes.Any) ([]byte, error) {
 	return proto.Marshal(&sdk.TxMsgData{MsgResponses: msgResponses})
+}
+
+func (app *BaseApp) runOp(mode runOpMode, opBytes []byte) (result *sdk.Result, err error) {
+	op, err := app.opDecoder(opBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	msgs := op.GetMsgs()
+	if err := validateBasicOpMsgs(msgs); err != nil {
+		return nil, err
+	}
+
+	// TODO: correct this
+	ctx := app.getContextForTx(runTxModeCheck, opBytes)
+	// Create a new Context based off of the existing Context with a MultiStore branch
+	// in case message processing fails. At this point, the MultiStore
+	// is a branch of a branch.
+	runOpCtx, _ := app.cacheTxContext(ctx, opBytes)
+	opResult, err := app.runOpMsgs(runOpCtx, msgs, mode)
+	if err != nil {
+		return nil, sdkerrors.Wrapf(err, "failed to execute operation")
+	}
+	return opResult, nil
+}
+
+func (app *BaseApp) runOpMsgs(ctx sdk.Context, msgs []sdk.OpMsg, mode runOpMode) (*sdk.Result, error) {
+	var msgResponses []*codectypes.Any
+	for i, msg := range msgs {
+		handler := app.opServiceRouter.Handler(msg)
+		if handler == nil {
+			return nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "can't route operation %+v; message index: %d", msg, i)
+		}
+		msgResult, err := handler(ctx, msg)
+		if err != nil {
+			return nil, sdkerrors.Wrapf(err, "failed to execute message; message index: %d", i)
+		}
+		if len(msgResult.MsgResponses) > 0 {
+			msgResponse := msgResult.MsgResponses[0]
+			if msgResponse == nil {
+				return nil, sdkerrors.ErrLogic.Wrapf("got nil Msg response at index %d for msg %s", i, sdk.OpMsgTypeURL(msg))
+			}
+			msgResponses = append(msgResponses, msgResponse)
+		}
+	}
+	return &sdk.Result{
+		MsgResponses: msgResponses,
+	}, nil
 }

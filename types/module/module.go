@@ -171,6 +171,11 @@ type AppModule interface {
 	ConsensusVersion() uint64
 }
 
+type ExtendedAppModule interface {
+	AppModule
+	RegisterOpServices(OpConfigurator)
+}
+
 // BeginBlockAppModule is an extension interface that contains information about the AppModule and BeginBlock.
 type BeginBlockAppModule interface {
 	AppModule
@@ -304,6 +309,14 @@ func (m *Manager) RegisterRoutes(router sdk.Router, queryRouter sdk.QueryRouter,
 func (m *Manager) RegisterServices(cfg Configurator) {
 	for _, module := range m.Modules {
 		module.RegisterServices(cfg)
+	}
+}
+
+func (m *Manager) RegisterOpServices(cfg OpConfigurator) {
+	for _, module := range m.Modules {
+		if xm, ok := module.(ExtendedAppModule); ok {
+			xm.RegisterOpServices(cfg)
+		}
 	}
 }
 

@@ -28,6 +28,14 @@ func (ctx Context) GetNode() (rpcclient.Client, error) {
 	return ctx.Client, nil
 }
 
+func (ctx Context) GetExtendedNode() (rpcclient.ExtendedClient, error) {
+	if ctx.ExtendedClient == nil {
+		return nil, errors.New("no extended RPC client is defined")
+	}
+
+	return ctx.ExtendedClient, nil
+}
+
 // Query performs a query to a Tendermint node with the provided path.
 // It returns the result and height of the query upon success or an error if
 // the query fails.

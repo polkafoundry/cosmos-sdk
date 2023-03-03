@@ -27,6 +27,7 @@ import (
 type Context struct {
 	FromAddress       sdk.AccAddress
 	Client            rpcclient.Client
+	ExtendedClient    rpcclient.ExtendedClient
 	GRPCClient        *grpc.ClientConn
 	ChainID           string
 	Codec             codec.Codec
@@ -54,12 +55,18 @@ type Context struct {
 	FeePayer          sdk.AccAddress
 	FeeGranter        sdk.AccAddress
 	Viper             *viper.Viper
+	OpConfig          OpConfig
 
 	// IsAux is true when the signer is an auxiliary signer (e.g. the tipper).
 	IsAux bool
 
 	// TODO: Deprecated (remove).
 	LegacyAmino *codec.LegacyAmino
+}
+
+func (ctx Context) WithOpConfig(opConfig OpConfig) Context {
+	ctx.OpConfig = opConfig
+	return ctx
 }
 
 // WithKeyring returns a copy of the context with an updated keyring.
@@ -393,4 +400,11 @@ func NewKeyringFromBackend(ctx Context, backend string) (keyring.Keyring, error)
 	}
 
 	return keyring.New(sdk.KeyringServiceName(), backend, ctx.KeyringDir, ctx.Input, ctx.Codec, ctx.KeyringOptions...)
+}
+
+// WithExtendedClient returns a copy of the context with an updated RPC client
+// instance.
+func (ctx Context) WithExtendedClient(client rpcclient.ExtendedClient) Context {
+	ctx.ExtendedClient = client
+	return ctx
 }

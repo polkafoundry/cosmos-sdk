@@ -170,4 +170,6 @@ var (
 	// ErrPanic is only set when we recover from a panic, so we know to
 	// redact potentially sensitive system info
 	ErrPanic = errorsmod.ErrPanic
+
+	ErrOpDecode = Register(RootCodespace, 42, "op parse error")
 )

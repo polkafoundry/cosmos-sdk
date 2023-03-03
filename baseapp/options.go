@@ -231,6 +231,7 @@ func (app *BaseApp) SetInterfaceRegistry(registry types.InterfaceRegistry) {
 	app.interfaceRegistry = registry
 	app.grpcQueryRouter.SetInterfaceRegistry(registry)
 	app.msgServiceRouter.SetInterfaceRegistry(registry)
+	app.opServiceRouter.SetInterfaceRegistry(registry)
 }
 
 // SetStreamingService is used to set a streaming service into the BaseApp hooks and load the listeners into the multistore
@@ -252,4 +253,15 @@ func (app *BaseApp) SetQueryMultiStore(ms sdk.MultiStore) {
 		panic("SetQueryMultiStore() on sealed BaseApp")
 	}
 	app.qms = ms
+}
+
+func SetOpDecoder(opDecoder sdk.OpDecoder) func(*BaseApp) {
+	return func(app *BaseApp) { app.SetOpDecoder(opDecoder) }
+}
+
+func (app *BaseApp) SetOpDecoder(opDecoder sdk.OpDecoder) {
+	if app.sealed {
+		panic("SetOpDecoder() on sealed BaseApp")
+	}
+	app.opDecoder = opDecoder
 }

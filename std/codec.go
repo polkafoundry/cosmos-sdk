@@ -5,6 +5,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec/types"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	optypes "github.com/cosmos/cosmos-sdk/types/op"
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 )
 
@@ -19,5 +20,6 @@ func RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 func RegisterInterfaces(interfaceRegistry types.InterfaceRegistry) {
 	sdk.RegisterInterfaces(interfaceRegistry)
 	txtypes.RegisterInterfaces(interfaceRegistry)
+	optypes.RegisterInterfaces(interfaceRegistry)
 	cryptocodec.RegisterInterfaces(interfaceRegistry)
 }

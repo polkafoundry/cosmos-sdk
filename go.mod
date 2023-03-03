@@ -167,6 +167,8 @@ replace (
 	github.com/jhump/protoreflect => github.com/jhump/protoreflect v1.9.0
 )
 
+replace github.com/tendermint/tendermint => ../../tendermint/tendermint
+
 retract (
 	// subject to a bug in the group module and gov module migration
 	[v0.46.5, v0.46.6]

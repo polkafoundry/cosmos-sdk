@@ -172,4 +172,12 @@ var (
 	ErrPanic = errorsmod.ErrPanic
 
 	ErrOpDecode = Register(RootCodespace, 42, "op parse error")
+
+	ErrOpInMempoolCache = Register(RootCodespace, 43, "op already in mempool")
+
+	// ErrOpMempoolIsFull defines an ABCI typed error where the mempool is full.
+	ErrOpMempoolIsFull = Register(RootCodespace, 44, "mempool is full")
+
+	// ErrOpTooLarge defines an ABCI typed error where op is too large.
+	ErrOpTooLarge = Register(RootCodespace, 45, "op too large")
 )

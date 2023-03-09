@@ -156,3 +156,23 @@ message SearchTxsResult {
   // List of txs in current page
   repeated TxResponse txs = 6;
 }
+
+message OpResponse {
+  option (gogoproto.goproto_getters) = false;
+  // The block height
+  int64 height = 1;
+  // The transaction hash.
+  string ophash = 2 [(gogoproto.customname) = "OpHash"];
+  // Namespace for the Code
+  string codespace = 3;
+  // Response code.
+  uint32 code = 4;
+  // Result bytes, if any.
+  bytes ret = 5;
+  // The request transaction bytes.
+  google.protobuf.Any op = 6;
+  // Time of the previous block. For heights > 1, it's the weighted median of
+  // the timestamps of the valid votes in the block.LastCommit. For height == 1,
+  // it's genesis time.
+  string timestamp = 7;
+}

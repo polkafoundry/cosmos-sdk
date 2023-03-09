@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	opmempool "github.com/tendermint/tendermint/eip4337/mempool"
 	"github.com/tendermint/tendermint/mempool"
 	tmtypes "github.com/tendermint/tendermint/types"
 	"google.golang.org/grpc/codes"
@@ -74,6 +75,41 @@ func CheckTendermintError(err error, tx tmtypes.Tx) *sdk.TxResponse {
 			Code:      sdkerrors.ErrTxTooLarge.ABCICode(),
 			Codespace: sdkerrors.ErrTxTooLarge.Codespace(),
 			TxHash:    txHash,
+		}
+
+	default:
+		return nil
+	}
+}
+
+func CheckTendermintOpError(err error, op tmtypes.Op) *sdk.OpResponse {
+	if err == nil {
+		return nil
+	}
+
+	errStr := strings.ToLower(err.Error())
+	opHash := fmt.Sprintf("%X", op.Hash())
+
+	switch {
+	case strings.Contains(errStr, strings.ToLower(opmempool.ErrOpInCache.Error())):
+		return &sdk.OpResponse{
+			Code:      sdkerrors.ErrTxInMempoolCache.ABCICode(),
+			Codespace: sdkerrors.ErrTxInMempoolCache.Codespace(),
+			OpHash:    opHash,
+		}
+
+	case strings.Contains(errStr, "mempool is full"):
+		return &sdk.OpResponse{
+			Code:      sdkerrors.ErrOpMempoolIsFull.ABCICode(),
+			Codespace: sdkerrors.ErrOpMempoolIsFull.Codespace(),
+			OpHash:    opHash,
+		}
+
+	case strings.Contains(errStr, "op too large"):
+		return &sdk.OpResponse{
+			Code:      sdkerrors.ErrOpTooLarge.ABCICode(),
+			Codespace: sdkerrors.ErrOpTooLarge.Codespace(),
+			OpHash:    opHash,
 		}
 
 	default:
@@ -181,17 +217,21 @@ func normalizeBroadcastMode(mode tx.BroadcastMode) string {
 
 // BroadcastOpSync broadcasts user operation bytes to a Tendermint node
 // synchronously (i.e. returns after CheckTx execution).
-// FIXME: correcting response
-func (ctx Context) BroadcastOpSync(opBytes []byte) (*sdk.TxResponse, error) {
+func (ctx Context) BroadcastOpSync(opBytes []byte) (*sdk.OpResponse, error) {
 	node, err := ctx.GetExtendedNode()
 	if err != nil {
 		return nil, err
 	}
 
 	res, err := node.BroadcastOpSync(context.Background(), opBytes)
-	if errRes := CheckTendermintError(err, opBytes); errRes != nil {
+	if errRes := CheckTendermintOpError(err, opBytes); errRes != nil {
 		return errRes, nil
 	}
 
-	return &sdk.TxResponse{TxHash: res.Hash.String()}, nil
+	return &sdk.OpResponse{
+		OpHash:    res.Hash.String(),
+		Codespace: res.Codespace,
+		Code:      res.Code,
+		Ret:       res.Ret,
+	}, nil
 }

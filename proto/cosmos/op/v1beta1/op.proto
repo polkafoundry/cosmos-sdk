@@ -40,3 +40,8 @@ message OpBody {
   // and can't be handled, they will be ignored
   repeated google.protobuf.Any non_critical_extension_options = 2047;
 }
+
+message ExtensionOptionsBundlingTx {
+  option (gogoproto.goproto_getters) = false;
+  repeated bytes ops = 1;
+}

@@ -618,6 +618,15 @@ func (app *BaseApp) getContextForTx(mode runTxMode, txBytes []byte) sdk.Context 
 	return ctx
 }
 
+// retrieve the context for the op w/ opBytes and other memoized values.
+func (app *BaseApp) getContextForOp(mode runOpMode, opBytes []byte) sdk.Context {
+	ctx := app.checkState.ctx
+
+	ctx = ctx.WithConsensusParams(app.GetConsensusParams(ctx))
+
+	return ctx
+}
+
 // cacheTxContext returns a new context based off of the provided context with
 // a branched multi-store.
 func (app *BaseApp) cacheTxContext(ctx sdk.Context, txBytes []byte) (sdk.Context, sdk.CacheMultiStore) {
@@ -629,6 +638,25 @@ func (app *BaseApp) cacheTxContext(ctx sdk.Context, txBytes []byte) (sdk.Context
 			sdk.TraceContext(
 				map[string]interface{}{
 					"txHash": fmt.Sprintf("%X", tmhash.Sum(txBytes)),
+				},
+			),
+		).(sdk.CacheMultiStore)
+	}
+
+	return ctx.WithMultiStore(msCache), msCache
+}
+
+// cacheTxContext returns a new context based off of the provided context with
+// a branched multi-store.
+func (app *BaseApp) cacheOpContext(ctx sdk.Context, opBytes []byte) (sdk.Context, sdk.CacheMultiStore) {
+	ms := ctx.MultiStore()
+	// TODO: https://github.com/cosmos/cosmos-sdk/issues/2824
+	msCache := ms.CacheMultiStore()
+	if msCache.TracingEnabled() {
+		msCache = msCache.SetTracingContext(
+			sdk.TraceContext(
+				map[string]interface{}{
+					"opHash": fmt.Sprintf("%X", tmhash.Sum(opBytes)),
 				},
 			),
 		).(sdk.CacheMultiStore)
@@ -876,7 +904,7 @@ func makeABCIData(msgResponses []*codectypes.Any) ([]byte, error) {
 	return proto.Marshal(&sdk.TxMsgData{MsgResponses: msgResponses})
 }
 
-func (app *BaseApp) runOp(mode runOpMode, opBytes []byte) (result *sdk.Result, err error) {
+func (app *BaseApp) runOp(mode runOpMode, opBytes []byte) (ret []byte, err error) {
 	op, err := app.opDecoder(opBytes)
 	if err != nil {
 		return nil, err
@@ -887,20 +915,37 @@ func (app *BaseApp) runOp(mode runOpMode, opBytes []byte) (result *sdk.Result, e
 		return nil, err
 	}
 
+	// FIXME: MVP first: Op contains only 1 msg only
+	if len(msgs) != 1 {
+		return nil, sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "must contain only 1 message")
+	}
+
 	// TODO: correct this
-	ctx := app.getContextForTx(runTxModeCheck, opBytes)
+	ctx := app.getContextForOp(mode, opBytes)
 	// Create a new Context based off of the existing Context with a MultiStore branch
 	// in case message processing fails. At this point, the MultiStore
 	// is a branch of a branch.
-	runOpCtx, _ := app.cacheTxContext(ctx, opBytes)
-	opResult, err := app.runOpMsgs(runOpCtx, msgs, mode)
+	runOpCtx, _ := app.cacheOpContext(ctx, opBytes)
+	msgResponses, err := app.runOpMsgs(runOpCtx, msgs, mode)
 	if err != nil {
 		return nil, sdkerrors.Wrapf(err, "failed to execute operation")
 	}
-	return opResult, nil
+
+	if len(msgResponses) != 1 {
+		return nil, sdkerrors.ErrLogic.Wrapf("expect 1 response, got %d", len(msgResponses))
+	}
+
+	// it is not recommended to use result when err is not nil,
+	// but it is a simple solution to return additional data alongside with the error
+	bz, err := proto.Marshal(msgResponses[0])
+	if err != nil {
+		return nil, err
+	}
+
+	return bz, nil
 }
 
-func (app *BaseApp) runOpMsgs(ctx sdk.Context, msgs []sdk.OpMsg, mode runOpMode) (*sdk.Result, error) {
+func (app *BaseApp) runOpMsgs(ctx sdk.Context, msgs []sdk.OpMsg, mode runOpMode) ([]*codectypes.Any, error) {
 	var msgResponses []*codectypes.Any
 	for i, msg := range msgs {
 		handler := app.opServiceRouter.Handler(msg)
@@ -919,7 +964,5 @@ func (app *BaseApp) runOpMsgs(ctx sdk.Context, msgs []sdk.OpMsg, mode runOpMode)
 			msgResponses = append(msgResponses, msgResponse)
 		}
 	}
-	return &sdk.Result{
-		MsgResponses: msgResponses,
-	}, nil
+	return msgResponses, nil
 }

@@ -1,6 +1,9 @@
 package types
 
-import "github.com/gogo/protobuf/proto"
+import (
+	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/gogo/protobuf/proto"
+)
 
 type OpMsg interface {
 	proto.Message
@@ -37,3 +40,8 @@ type OpDecoder func(opBytes []byte) (Op, error)
 
 // OpEncoder marshals transaction to bytes
 type OpEncoder func(op Op) ([]byte, error)
+
+func (m OpResponse) String() string {
+	bz, _ := codec.MarshalYAML(codec.NewProtoCodec(nil), &m)
+	return string(bz)
+}

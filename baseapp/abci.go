@@ -876,18 +876,18 @@ func (app *BaseApp) CheckOp(req abci.RequestCheckOp) abci.ResponseCheckOp {
 		panic(fmt.Sprintf("unknown RequestCheckOp type: %s", req.Type))
 	}
 
-	result, err := app.runOp(mode, req.Op)
+	// result, msg
+	bz, err := app.runOp(mode, req.Op)
+	var space string
+	var code uint32
+
 	if err != nil {
-		space, code, log := errorsmod.ABCIInfo(err, app.trace)
-		return abci.ResponseCheckOp{
-			Code:      code,
-			Codespace: space,
-			Log:       log,
-		}
+		space, code, _ = errorsmod.ABCIInfo(err, app.trace)
 	}
 
 	return abci.ResponseCheckOp{
-		Log:  result.Log,
-		Data: result.Data,
+		Code:      code,
+		Codespace: space,
+		Ret:       bz,
 	}
 }
